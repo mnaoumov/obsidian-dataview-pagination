@@ -1,0 +1,22 @@
+# Dataview Pagination
+
+Follow the shared Obsidian workspace conventions.
+
+## Architecture
+
+- `src/pagination.ts` is pure paging arithmetic and the parser for the page-size setting.
+- `src/paged-view-component.ts` draws one page and the pager. It gives every page its own child component, so what the previous page rendered unloads with it.
+- `src/paged-query-component.ts` runs a DQL `TABLE` or `LIST` through `api.query`, and re-runs it on `dataview:refresh-views` and when a hidden view is shown, the two triggers `Dataview`'s own renderer uses. A query that fails goes back to `Dataview`'s `execute`, so the error text stays its own.
+- `src/dataview-pagination-component.ts` patches `api.execute`, `api.table` and `api.list` on the instance, re-patching on `dataview:api-ready` when `Dataview` reloads. `TASK` and `CALENDAR` queries pass through.
+
+`TableGrouping` and the list renderer are bundled inside `Dataview`, so nothing can patch them. Instead, each page is drawn by calling `api.table` or `api.list` with only that page's rows. That is why `renderUnpaged` exists: without its flag, the slice would be paged a second time.
+
+The stylesheet hides `Dataview`'s result count in the table heading while a view is paged, because it would show one page's rows; the pager's summary shows the total.
+
+## Scope
+
+`Dataview` only, pagination only, global settings only. The reasoning, and what was found about Datacore, Bases and Markdown tables, is recorded in the task that created this plugin. `Datacore` pages by default and core Bases tables are virtualized.
+
+## Validation
+
+The standard gate, plus `npm run test:integration:desktop`, whose suite downloads `Dataview` 0.5.70 from its `GitHub` release into the test vault. It needs network access. `src/dataview-api.ts` is typed by hand because `Dataview` publishes no types for these members.

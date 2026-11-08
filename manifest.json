@@ -1,0 +1,11 @@
+{
+  "author": "mnaoumov",
+  "authorUrl": "https://github.com/mnaoumov/",
+  "description": "Adds pagination to Dataview tables and lists.",
+  "fundingUrl": "https://www.buymeacoffee.com/mnaoumov",
+  "id": "dataview-pagination",
+  "isDesktopOnly": false,
+  "minAppVersion": "1.15.0",
+  "name": "Dataview Pagination",
+  "version": "0.0.0"
+}

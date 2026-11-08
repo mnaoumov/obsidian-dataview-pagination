@@ -1,0 +1,33 @@
+.dataview-pagination-pager {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  margin-block: var(--size-4-2);
+  font-size: var(--font-ui-small);
+}
+
+.dataview-pagination-navigation,
+.dataview-pagination-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--size-4-1);
+}
+
+.dataview-pagination-current {
+  font-weight: var(--font-bold);
+  text-decoration: underline;
+}
+
+.dataview-pagination-options input {
+  width: 5em;
+}
+
+.dataview-pagination-summary {
+  color: var(--text-muted);
+}
+
+/* Dataview's count in the first heading would show one page's rows; the summary shows the total. */
+.dataview-pagination-paged th .dataview.small-text {
+  display: none;
+}
