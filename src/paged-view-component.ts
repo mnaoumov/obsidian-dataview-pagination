@@ -117,7 +117,7 @@ export class PagedViewComponent<T> extends Component {
     this.addPageButton({ containerEl: navigationEl, isDisabled: this.page === 1, label: 'Previous', targetPage: this.page - 1 });
 
     const visiblePages = getVisiblePageNumbers(this.page, pageCount);
-    if ((visiblePages[0] ?? 1) > 1) {
+    if (!visiblePages.includes(1)) {
       navigationEl.createSpan({ text: '...' });
     }
     for (const visiblePage of visiblePages) {
@@ -134,7 +134,7 @@ export class PagedViewComponent<T> extends Component {
       buttonEl.addClass('dataview-pagination-current');
       buttonEl.setAttr('aria-current', 'page');
     }
-    if ((visiblePages.at(-1) ?? pageCount) < pageCount) {
+    if (!visiblePages.includes(pageCount)) {
       navigationEl.createSpan({ text: '...' });
     }
 
