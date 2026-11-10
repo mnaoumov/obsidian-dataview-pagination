@@ -20,3 +20,5 @@ The stylesheet hides `Dataview`'s result count in the table heading while a view
 ## Validation
 
 The standard gate, plus `npm run test:integration:desktop`, whose suite downloads `Dataview` 0.5.70 from its `GitHub` release into the test vault. It needs network access. `src/dataview-api.ts` is typed by hand because `Dataview` publishes no types for these members.
+
+`npm run capture:screenshots` regenerates `images/screenshots/screenshot-desktop-*.png` for the README and the listing, from `src/screenshots.desktop-capture.integration.test.ts`. No standard project collects that file, so the gate never rewrites the images.

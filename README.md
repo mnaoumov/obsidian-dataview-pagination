@@ -6,6 +6,21 @@ Adds pagination to [Dataview](https://community.obsidian.md/plugins/dataview) ta
 
 It needs `Dataview` installed and enabled.
 
+<!-- markdownlint-disable MD033 -->
+
+<a href="https://github.com/mnaoumov/obsidian-dataview-pagination/blob/HEAD/images/screenshots/screenshot-desktop-1.png"><img src="images/screenshots/screenshot-desktop-1.png" alt="Every Dataview table and list gets page controls" width="600"></a>
+
+<details>
+<summary>More screenshots</summary>
+
+<div>
+<a href="https://github.com/mnaoumov/obsidian-dataview-pagination/blob/HEAD/images/screenshots/screenshot-desktop-2.png"><img src="images/screenshots/screenshot-desktop-2.png" alt="Choose the page sizes and when the controls appear" width="600"></a>
+</div>
+
+</details>
+
+<!-- markdownlint-enable MD033 -->
+
 ## What it does
 
 1. Pages every DQL `TABLE` and `LIST` and every `dv.table` and `dv.list` view.
