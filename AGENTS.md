@@ -19,6 +19,6 @@ The stylesheet hides `Dataview`'s result count in the table heading while a view
 
 ## Validation
 
-The standard gate, plus `npm run test:integration:desktop`, whose suite downloads `Dataview` 0.5.70 from its `GitHub` release into the test vault. It needs network access. `src/dataview-api.ts` is typed by hand because `Dataview` publishes no types for these members.
+The standard gate, plus `npm run test:integration:desktop` and `npm run test:integration:android`, whose suites download `Dataview` 0.5.70 from its `GitHub` release into the test vault. Both need network access, and the Android one boots the shared `obsidian_test` AVD. The Android suite only proves that a DQL table pages on a phone; page size, jump to page, refresh and the error fallback are covered on desktop. `src/dataview-api.ts` is typed by hand because `Dataview` publishes no types for these members.
 
 `npm run capture:screenshots` regenerates `images/screenshots/screenshot-desktop-*.png` for the README and the listing, from `src/screenshots.desktop-capture.integration.test.ts`, then `screenshot-mobile-*.png` from `src/screenshots.android-capture.integration.test.ts`. The Android project, `capture-screenshots:android`, boots the 900x1600 `obsidian_screenshots` AVD, whose Obsidian must be at least the manifest's `minAppVersion` (`provision-obsidian-avd.ps1 -AvdName obsidian_screenshots`). No standard project collects either file, so the gate never rewrites the images.
