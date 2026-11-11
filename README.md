@@ -15,6 +15,8 @@ It needs `Dataview` installed and enabled.
 
 <div>
 <a href="https://github.com/mnaoumov/obsidian-dataview-pagination/blob/HEAD/images/screenshots/screenshot-desktop-2.png"><img src="images/screenshots/screenshot-desktop-2.png" alt="Choose the page sizes and when the controls appear" width="600"></a>
+<a href="https://github.com/mnaoumov/obsidian-dataview-pagination/blob/HEAD/images/screenshots/screenshot-mobile-1.png"><img src="images/screenshots/screenshot-mobile-1.png" alt="Every Dataview table and list gets page controls" width="270"></a>
+<a href="https://github.com/mnaoumov/obsidian-dataview-pagination/blob/HEAD/images/screenshots/screenshot-mobile-2.png"><img src="images/screenshots/screenshot-mobile-2.png" alt="Choose the page sizes and when the controls appear" width="270"></a>
 </div>
 
 </details>
