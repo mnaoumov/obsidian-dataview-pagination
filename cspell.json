@@ -35,6 +35,7 @@
     "inlines",
     "Invocables",
     "jiti",
+    "katex",
     "lezer",
     "liberapay",
     "linkinator",
