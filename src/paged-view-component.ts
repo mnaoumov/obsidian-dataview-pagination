@@ -1,3 +1,4 @@
+import { ComponentEx } from '@mnaoumov/obsidian-lib/components/component-ex';
 import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
 import { Component } from 'obsidian';
 
@@ -37,7 +38,7 @@ interface PagedViewComponentAddPageButtonParams {
  *
  * Every page gets its own child component, so whatever the previous page rendered is unloaded with it.
  */
-export class PagedViewComponent<T> extends Component {
+export class PagedViewComponent<T> extends ComponentEx {
   private readonly contentEl: HTMLElement;
   private items: T[] = [];
   private page = 1;

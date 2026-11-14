@@ -1,3 +1,4 @@
+import { ComponentEx } from '@mnaoumov/obsidian-lib/components/component-ex';
 import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
 import { Component } from 'obsidian';
 
@@ -29,7 +30,7 @@ export interface PagedQueryComponentConstructorParams {
  *
  * A query that fails is handed back to `Dataview`, so its error message stays `Dataview`'s own.
  */
-export class PagedQueryComponent extends Component {
+export class PagedQueryComponent extends ComponentEx {
   private fallbackComponent: Component | null = null;
   private lastRevision = -1;
   private pagedView: null | PagedViewComponent<unknown> = null;
