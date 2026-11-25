@@ -207,7 +207,7 @@ async function clickPageButton(label: string): Promise<void> {
   await evalInObsidian({
     async callback({ app, buttonLabel, lib: { clickElement }, pagerSelector }): Promise<void> {
       const pagerEl = app.workspace.getMostRecentLeaf()?.view.containerEl.querySelector(pagerSelector);
-      const buttonEl = [...pagerEl?.querySelectorAll<HTMLButtonElement>(':scope .dataview-pagination-navigation button') ?? []].find((el) => el.textContent === buttonLabel);
+      const buttonEl = [...(pagerEl?.querySelectorAll<HTMLButtonElement>(':scope .dataview-pagination-navigation button') ?? [])].find((el) => el.textContent === buttonLabel);
       if (!buttonEl) {
         throw new Error(`No ${buttonLabel} button.`);
       }

@@ -245,7 +245,7 @@ async function clickNextButton(): Promise<void> {
   await evalInObsidian({
     async callback({ app, lib: { clickElement }, pagerSelector }): Promise<void> {
       const pagerEl = app.workspace.getMostRecentLeaf()?.view.containerEl.querySelector(pagerSelector);
-      const buttonEl = [...pagerEl?.querySelectorAll<HTMLButtonElement>(':scope .dataview-pagination-navigation button') ?? []].find((el) => el.textContent === 'Next');
+      const buttonEl = [...(pagerEl?.querySelectorAll<HTMLButtonElement>(':scope .dataview-pagination-navigation button') ?? [])].find((el) => el.textContent === 'Next');
       if (!buttonEl) {
         throw new Error('No Next button.');
       }
