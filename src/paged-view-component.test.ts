@@ -216,7 +216,7 @@ function getButton(containerEl: HTMLElement, label: string): HTMLButtonElement {
 }
 
 function getEllipsisCount(navigationEl: Element | null): number {
-  return [...navigationEl?.querySelectorAll('span') ?? []].filter((span) => span.textContent === '...').length;
+  return [...(navigationEl?.querySelectorAll('span') ?? [])].filter((span) => span.textContent === '...').length;
 }
 
 function getJumpInput(containerEl: HTMLElement): HTMLInputElement {
