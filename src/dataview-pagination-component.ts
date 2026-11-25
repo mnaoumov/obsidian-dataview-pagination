@@ -1,19 +1,25 @@
 import type { App } from 'obsidian';
 
+import { registerAsyncEvent } from '@mnaoumov/obsidian-lib/components/async-events-component';
 import { MonkeyAroundComponent } from '@mnaoumov/obsidian-lib/components/monkey-around-component';
+import { DATAVIEW_PLUGIN_ADAPTER } from '@mnaoumov/obsidian-lib/dataview';
+import {
+  getThirdPartyPluginApi,
+  watchThirdPartyPluginApi
+} from '@mnaoumov/obsidian-lib/plugin/third-party-plugin';
 import { noopAsync } from '@mnaoumov/typescript-lib/function';
 
-import type { DataviewApi } from './dataview-api.ts';
+import type {
+  DataviewApi,
+  DataviewPluginApi
+} from './dataview-api.ts';
 import type { RenderPage } from './paged-view-component.ts';
 import type { PluginSettings } from './plugin-settings.ts';
 
+import { toPaginationApi } from './dataview-api.ts';
 import { PagedQueryComponent } from './paged-query-component.ts';
 import { PagedViewComponent } from './paged-view-component.ts';
 import { parsePageSizes } from './pagination.ts';
-
-interface DataviewPluginInstance {
-  readonly api?: DataviewApi;
-}
 
 const PAGED_QUERY_PATTERN = /^\s*(?:list|table)\b/iu;
 
@@ -41,11 +47,24 @@ export class DataviewPaginationComponent extends MonkeyAroundComponent {
     this.getSettings = params.getSettings;
   }
 
+  /**
+   * `Dataview` is an optional dependency: without it the plugin has nothing to page, so it loads anyway and patches each
+   * API the plugin publishes. The watch follows `Dataview` through enable, disable and reload; `dataview:api-ready`
+   * and layout ready stay as triggers too, because `Dataview` is not built on obsidian-lib and so announces a fresh API
+   * only through its own event.
+   */
   public override onload(): void {
     super.onload();
+    const dataviewApiRef = watchThirdPartyPluginApi({ adapter: DATAVIEW_PLUGIN_ADAPTER, app: this.app, component: this });
+    registerAsyncEvent(
+      this,
+      dataviewApiRef.on('change', () => {
+        this.patchApi(dataviewApiRef.value);
+      })
+    );
     this.registerEvent(this.app.metadataCache.on('dataview:api-ready' as 'resolved', this.patchCurrentApi.bind(this)));
     this.app.workspace.onLayoutReady(this.patchCurrentApi.bind(this));
-    this.patchCurrentApi();
+    this.patchApi(dataviewApiRef.value);
   }
 
   private createPagedView(
@@ -61,20 +80,22 @@ export class DataviewPaginationComponent extends MonkeyAroundComponent {
     });
   }
 
-  private getDataviewApi(): DataviewApi | null {
-    const plugin = this.app.plugins.getPlugin('dataview') as DataviewPluginInstance | null;
-    return plugin?.api ?? null;
-  }
-
-  private patchCurrentApi(): void {
-    const api = this.getDataviewApi();
-    if (!api || api === this.patchedApi) {
+  private patchApi(pluginApi: DataviewPluginApi | null): void {
+    if (!pluginApi) {
+      return;
+    }
+    const api = toPaginationApi(pluginApi);
+    if (api === this.patchedApi) {
       return;
     }
     this.patchedApi = api;
     this.patchTable(api);
     this.patchList(api);
     this.patchExecute(api);
+  }
+
+  private patchCurrentApi(): void {
+    this.patchApi(getThirdPartyPluginApi({ adapter: DATAVIEW_PLUGIN_ADAPTER, app: this.app }));
   }
 
   private patchExecute(api: DataviewApi): void {

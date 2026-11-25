@@ -85,6 +85,24 @@ class FakeDataviewApi implements DataviewApi {
     return noopAsync();
   }
 
+  /**
+   * Present only because the obsidian-lib adapter verifies the API by its `page`, `pages` and `query` members.
+   *
+   * @returns Nothing.
+   */
+  public page(): null {
+    return null;
+  }
+
+  /**
+   * Present only because the obsidian-lib adapter verifies the API by its `page`, `pages` and `query` members.
+   *
+   * @returns No pages.
+   */
+  public pages(): unknown[] {
+    return [];
+  }
+
   public query(): Promise<DataviewResult> {
     return Promise.resolve(this.result);
   }
@@ -220,6 +238,19 @@ describe('DataviewPaginationComponent', () => {
     expect(containerEl.querySelectorAll(':scope .dataview-pagination-pager')).toHaveLength(1);
   });
 
+  it('patches a re-enabled API when Obsidian reports the plugin list changed', async () => {
+    const { app, setPluginApi } = createHarness();
+    const reloadedApi = new FakeDataviewApi(app);
+    setPluginApi(reloadedApi);
+
+    app.plugins.trigger('changed');
+    const containerEl = createDiv();
+    await reloadedApi.list(numbers(), containerEl, createOwner(), FILE_PATH);
+
+    expect(reloadedApi.listCalls).toHaveLength(1);
+    expect(reloadedApi.listCalls[0]?.values).toEqual(numbers().slice(0, PAGE_SIZE));
+  });
+
   it('does nothing while the plugin is not loaded', () => {
     const app = App.createConfigured__().asOriginalType__();
     vi.spyOn(app.plugins, 'getPlugin').mockReturnValue(null);
@@ -246,6 +277,7 @@ describe('DataviewPaginationComponent', () => {
 function createHarness(): Harness {
   const app = App.createConfigured__().asOriginalType__();
   const api = new FakeDataviewApi(app);
+  app.plugins.loadingPluginId = null;
   const getPluginSpy = vi.spyOn(app.plugins, 'getPlugin');
   function setPluginApi(pluginApi: DataviewApi): void {
     getPluginSpy.mockReturnValue(strictProxy<DataviewPluginHost>({ api: pluginApi }));
