@@ -5,7 +5,7 @@ Follow the shared Obsidian workspace conventions.
 ## Architecture
 
 - `src/pagination.ts` is pure paging arithmetic and the parser for the page-size setting.
-- `src/paged-view-component.ts` draws one page and the pager. It gives every page its own child component, so what the previous page rendered unloads with it.
+- `src/paged-view-component.ts` draws one page and the pager. It gives every page its own child component, so what the previous page rendered unloads with it. Each pager is a labelled `nav` landmark. A single visually hidden `role="status"` live region sits outside the pagers, so two pagers announce a page change once. It is written only when its text changes, so a refresh that keeps the page stays silent.
 - `src/paged-query-component.ts` runs a DQL `TABLE` or `LIST` through `api.query`, and re-runs it on `dataview:refresh-views` and when a hidden view is shown, the two triggers `Dataview`'s own renderer uses. A query that fails goes back to `Dataview`'s `execute`, so the error text stays its own.
 - `src/dataview-pagination-component.ts` patches `api.execute`, `api.table` and `api.list` on the instance. It reads the API through `obsidian-lib`'s `DATAVIEW_PLUGIN_ADAPTER` as an optional dependency (`watchThirdPartyPluginApi`), re-patching on each change, and also on `dataview:api-ready` and layout ready, because `Dataview` is not built on `obsidian-lib`. `TASK` and `CALENDAR` queries pass through.
 
