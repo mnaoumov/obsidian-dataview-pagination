@@ -21,7 +21,7 @@ interface DataviewPaginationPluginHost {
 }
 
 interface DataviewPaginationSettingsHost {
-  readonly editAndSave: (settingsEditor: (settings: PagerPlacementSettings) => void) => Promise<void>;
+  readonly editAndSave: (settingsEditor: (settings: Record<string, boolean | string>) => void) => Promise<void>;
 }
 
 interface DataviewPluginHost {
@@ -34,9 +34,11 @@ interface PagerCounts {
   readonly below: number;
 }
 
-interface PagerPlacementSettings {
-  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The settings editor writes the value in place.
-  pagerPlacement: string;
+interface ViewTopPosition {
+  readonly scrollTop: number;
+  readonly viewTop: number;
+  readonly visibleBottom: number;
+  readonly visibleTop: number;
 }
 
 const DATAVIEW_VERSION = '0.5.70';
@@ -79,6 +81,9 @@ WHERE file.name = "Numbers"
 FLATTEN numbers AS item
 \`\`\`
 `;
+
+const FILLER_LINE_COUNT = 80;
+const LONG_NOTE_CONTENT = `${Array.from({ length: FILLER_LINE_COUNT }, (_, index) => `Filler paragraph ${String(index + 1)}.`).join('\n\n')}\n\n${TABLE_NOTE_CONTENT}`;
 
 const BROKEN_NOTE_PATH = 'Broken.md';
 const BROKEN_NOTE_CONTENT = `\`\`\`dataview
@@ -210,7 +215,7 @@ describe('paging real Dataview views', () => {
   });
 
   it('draws the pager above and below the page when the controls position is both, and the two stay in step', { timeout: TEST_TIMEOUT_IN_MILLISECONDS }, async () => {
-    await setPagerPlacement('both');
+    await editSettings({ pagerPlacement: 'both' });
     try {
       await openNote('Both.md', TABLE_NOTE_CONTENT);
       const firstSummaries = await waitForSummaries(`Page 1 of 5, total items: ${String(ITEM_COUNT)}`);
@@ -232,7 +237,55 @@ describe('paging real Dataview views', () => {
       expect(await waitForSummaries(`Page 2 of 5, total items: ${String(ITEM_COUNT)}`)).toEqual({ above: 1, below: 1 });
       expect(await waitForFirstCell(String(PAGE_SIZE + 1))).toBe(String(PAGE_SIZE + 1));
     } finally {
-      await setPagerPlacement('below');
+      await editSettings({ pagerPlacement: 'below' });
+    }
+  });
+
+  it('scrolls the view top into sight after a page change when the setting is on', { timeout: TEST_TIMEOUT_IN_MILLISECONDS }, async () => {
+    await editSettings({ shouldScrollToTopOnPageChange: true });
+    try {
+      await openNote('Scroll.md', LONG_NOTE_CONTENT);
+      // The reading view renders only the sections near the viewport, so the view under the filler appears once the note is scrolled down to it.
+      await pollInObsidian({
+        input: { summarySelector: SUMMARY_SELECTOR },
+        poll: ({ app, summarySelector }) => {
+          const containerEl = app.workspace.getMostRecentLeaf()?.view.containerEl;
+          const previewEl = containerEl?.querySelector<HTMLElement>(':scope .markdown-reading-view .markdown-preview-view');
+          if (previewEl) {
+            previewEl.scrollTop = previewEl.scrollHeight;
+          }
+          return containerEl?.querySelector(summarySelector)?.textContent ?? '';
+        },
+        timeoutInMilliseconds: POLL_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'the pager under the filler',
+        until: (text) => text === `Page 1 of 5, total items: ${String(ITEM_COUNT)}`,
+        vaultPath: vaultPath()
+      });
+      await clickNextButton();
+      expect(await waitForFirstCell(String(PAGE_SIZE + 1))).toBe(String(PAGE_SIZE + 1));
+
+      const position = await pollInObsidian({
+        poll: ({ app }): ViewTopPosition => {
+          const readingViewEl = app.workspace.getMostRecentLeaf()?.view.containerEl.querySelector<HTMLElement>(':scope .markdown-reading-view .markdown-preview-view');
+          const viewEl = readingViewEl?.querySelector(':scope .dataview-pagination-content')?.parentElement;
+          const visibleRect = readingViewEl?.getBoundingClientRect();
+          return {
+            scrollTop: readingViewEl?.scrollTop ?? 0,
+            viewTop: viewEl?.getBoundingClientRect().top ?? NaN,
+            visibleBottom: visibleRect?.bottom ?? 0,
+            visibleTop: visibleRect?.top ?? 0
+          };
+        },
+        timeoutInMilliseconds: POLL_TIMEOUT_IN_MILLISECONDS,
+        timeoutMessage: 'the view top to scroll into sight',
+        until: ({ viewTop, visibleBottom, visibleTop }) => viewTop >= visibleTop - 1 && viewTop < visibleBottom,
+        vaultPath: vaultPath()
+      });
+      expect(position.viewTop).toBeGreaterThanOrEqual(position.visibleTop - 1);
+      expect(position.viewTop).toBeLessThan(position.visibleBottom);
+      expect(position.scrollTop).toBeGreaterThan(0);
+    } finally {
+      await editSettings({ shouldScrollToTopOnPageChange: false });
     }
   });
 
@@ -303,6 +356,28 @@ async function clickNextButton(): Promise<void> {
 }
 
 /**
+ * Changes settings through the plugin's own settings component, as the settings tab does.
+ *
+ * @param values - The settings to change, by key.
+ */
+async function editSettings(values: Record<string, boolean | string>): Promise<void> {
+  await evalInObsidian({
+    async callback({ app, newValues }): Promise<void> {
+      // eslint-disable-next-line no-restricted-syntax -- A closure runs inside Obsidian, where no cast helper can be imported.
+      const plugin = app.plugins.getPlugin('dataview-pagination') as unknown as DataviewPaginationPluginHost | null;
+      if (!plugin) {
+        throw new Error('Dataview Pagination is not loaded.');
+      }
+      await plugin.pluginSettingsComponent.editAndSave((settings) => {
+        Object.assign(settings, newValues);
+      });
+    },
+    input: { newValues: values },
+    vaultPath: vaultPath()
+  });
+}
+
+/**
  * Creates a note and opens it in reading view.
  *
  * @param notePath - The note path.
@@ -315,28 +390,6 @@ async function openNote(notePath: string, noteContent: string): Promise<void> {
       await app.workspace.getLeaf(false).openFile(note, { state: { mode: 'preview' } });
     },
     input: { content: noteContent, path: notePath },
-    vaultPath: vaultPath()
-  });
-}
-
-/**
- * Changes the controls position setting through the plugin's own settings component, as the settings tab does.
- *
- * @param pagerPlacement - The new placement.
- */
-async function setPagerPlacement(pagerPlacement: 'above' | 'below' | 'both'): Promise<void> {
-  await evalInObsidian({
-    async callback({ app, placement }): Promise<void> {
-      // eslint-disable-next-line no-restricted-syntax -- A closure runs inside Obsidian, where no cast helper can be imported.
-      const plugin = app.plugins.getPlugin('dataview-pagination') as unknown as DataviewPaginationPluginHost | null;
-      if (!plugin) {
-        throw new Error('Dataview Pagination is not loaded.');
-      }
-      await plugin.pluginSettingsComponent.editAndSave((settings) => {
-        settings.pagerPlacement = placement;
-      });
-    },
-    input: { placement: pagerPlacement },
     vaultPath: vaultPath()
   });
 }

@@ -21,6 +21,7 @@ export interface PagedViewComponentConstructorParams<T> {
   readonly pagerPlacement: PagerPlacement;
   readonly pageSizes: readonly number[];
   readonly renderPage: RenderPage<T>;
+  readonly shouldScrollToTopOnPageChange: boolean;
   readonly shouldShowPagerForShortResults: boolean;
 }
 
@@ -40,9 +41,11 @@ interface PagedViewComponentAddPageButtonParams {
  * Shows a list of items one page at a time, with page controls below it, above it, or both.
  *
  * Every page gets its own child component, so whatever the previous page rendered is unloaded with it. Every pager is
- * redrawn from the same state on each render, so two pagers never disagree.
+ * redrawn from the same state on each render, so two pagers never disagree. When asked to, a page change made from a
+ * pager scrolls the view's top into sight, so the reader starts the new page at its first row; a refresh never scrolls.
  */
 export class PagedViewComponent<T> extends ComponentEx {
+  private readonly containerEl: HTMLElement;
   private readonly contentEl: HTMLElement;
   private items: T[] = [];
   private page = 1;
@@ -51,6 +54,7 @@ export class PagedViewComponent<T> extends ComponentEx {
   private pageSize: number;
   private readonly pageSizes: readonly number[];
   private readonly renderPage: RenderPage<T>;
+  private readonly shouldScrollToTopOnPageChange: boolean;
   private readonly shouldShowPagerForShortResults: boolean;
 
   public constructor(params: PagedViewComponentConstructorParams<T>) {
@@ -58,8 +62,10 @@ export class PagedViewComponent<T> extends ComponentEx {
     this.pageSizes = params.pageSizes;
     this.pageSize = params.pageSizes[0] ?? FALLBACK_PAGE_SIZE;
     this.renderPage = params.renderPage;
+    this.shouldScrollToTopOnPageChange = params.shouldScrollToTopOnPageChange;
     this.shouldShowPagerForShortResults = params.shouldShowPagerForShortResults;
     const { containerEl, pagerPlacement } = params;
+    this.containerEl = containerEl;
     const pagerEls: HTMLElement[] = [];
     if (pagerPlacement !== 'below') {
       pagerEls.push(containerEl.createDiv({ cls: ['dataview-pagination-pager', 'dataview-pagination-pager-above'] }));
@@ -97,6 +103,9 @@ export class PagedViewComponent<T> extends ComponentEx {
   private async goToPage(page: number): Promise<void> {
     this.page = page;
     await this.render();
+    if (this.shouldScrollToTopOnPageChange) {
+      this.containerEl.scrollIntoView({ block: 'start' });
+    }
   }
 
   private isPagerVisible(): boolean {

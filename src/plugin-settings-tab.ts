@@ -41,6 +41,15 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         }
       }),
       this.settingEx({
+        desc: 'After First, Previous, Next, Last, a page number, a jump or a new page size, scroll the view back so its first row is in sight. A refresh never scrolls.',
+        name: 'Scroll to the top on page change',
+        render: (setting) => {
+          setting.addToggle((toggle) => {
+            this.bind({ propertyName: 'shouldScrollToTopOnPageChange', valueComponent: toggle });
+          });
+        }
+      }),
+      this.settingEx({
         desc: 'Show the page controls even when every result fits on one page.',
         name: 'Show controls for short results',
         render: (setting) => {
