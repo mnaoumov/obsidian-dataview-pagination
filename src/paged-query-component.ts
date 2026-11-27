@@ -7,6 +7,7 @@ import type {
   DataviewQueryResult
 } from './dataview-api.ts';
 import type { RenderPage } from './paged-view-component.ts';
+import type { PagerPlacement } from './pagination.ts';
 
 import { PagedViewComponent } from './paged-view-component.ts';
 
@@ -17,6 +18,7 @@ export interface PagedQueryComponentConstructorParams {
   readonly api: DataviewApi;
   readonly containerEl: HTMLElement;
   readonly filePath: string;
+  readonly pagerPlacement: PagerPlacement;
   readonly pageSizes: readonly number[];
   readonly renderFallback: (containerEl: HTMLElement, component: Component) => Promise<void>;
   readonly renderList: (values: unknown[], containerEl: HTMLElement, component: Component) => Promise<void>;
@@ -40,8 +42,8 @@ export class PagedQueryComponent extends ComponentEx {
 
   public constructor(params: PagedQueryComponentConstructorParams) {
     super();
-    const { api, containerEl, filePath, pageSizes, renderFallback, renderList, renderTable, shouldShowPagerForShortResults, source } = params;
-    this.params = { api, containerEl, filePath, pageSizes, renderFallback, renderList, renderTable, shouldShowPagerForShortResults, source };
+    const { api, containerEl, filePath, pagerPlacement, pageSizes, renderFallback, renderList, renderTable, shouldShowPagerForShortResults, source } = params;
+    this.params = { api, containerEl, filePath, pagerPlacement, pageSizes, renderFallback, renderList, renderTable, shouldShowPagerForShortResults, source };
   }
 
   public override onload(): void {
@@ -55,11 +57,11 @@ export class PagedQueryComponent extends ComponentEx {
   }
 
   private createPagedView(value: DataviewQueryResult): PagedViewComponent<unknown> {
-    const { containerEl, pageSizes, renderList, renderTable, shouldShowPagerForShortResults } = this.params;
+    const { containerEl, pagerPlacement, pageSizes, renderList, renderTable, shouldShowPagerForShortResults } = this.params;
     const renderPage: RenderPage<unknown> = value.type === 'table'
       ? (pageItems, pageEl, component): Promise<void> => renderTable(value.headers, pageItems as unknown[][], pageEl, component)
       : (pageItems, pageEl, component): Promise<void> => renderList(pageItems, pageEl, component);
-    return new PagedViewComponent({ containerEl, pageSizes, renderPage, shouldShowPagerForShortResults });
+    return new PagedViewComponent({ containerEl, pagerPlacement, pageSizes, renderPage, shouldShowPagerForShortResults });
   }
 
   private maybeRefresh(): void {

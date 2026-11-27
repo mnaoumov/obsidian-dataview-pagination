@@ -1,4 +1,9 @@
 /**
+ * Where the page controls are drawn relative to the page.
+ */
+export type PagerPlacement = 'above' | 'below' | 'both';
+
+/**
  * How many page numbers are shown on each side of the current page.
  */
 const PAGE_NUMBER_RADIUS = 2;

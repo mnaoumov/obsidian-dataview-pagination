@@ -8,6 +8,7 @@ import { SettingEx } from '@mnaoumov/obsidian-lib/setting-ex';
 import { castTo } from '@mnaoumov/typescript-lib/object-utils';
 import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import {
+  DropdownComponent,
   TextComponent,
   ToggleComponent
 } from 'obsidian';
@@ -27,12 +28,13 @@ interface BoundRow {
 }
 
 describe('PluginSettingsTab', () => {
-  it('should declare the three settings by name, in order', () => {
+  it('should declare the four settings by name, in order', () => {
     const tab = createTab();
 
     expect(tab.getSettingDefinitions().map((definition) => 'name' in definition ? definition.name : '')).toEqual([
       'Enable pagination',
       'Items per page',
+      'Controls position',
       'Show controls for short results'
     ]);
   });
@@ -53,6 +55,7 @@ describe('PluginSettingsTab', () => {
     }))).toEqual([
       { componentType: 'toggle', propertyName: 'isPaginationEnabled' },
       { componentType: 'text', propertyName: 'pageSizes' },
+      { componentType: 'dropdown', propertyName: 'pagerPlacement' },
       { componentType: 'toggle', propertyName: 'shouldShowPagerForShortResults' }
     ]);
   });
@@ -68,6 +71,7 @@ function createTab(): PluginSettingsTab {
       inputValues: new PluginSettings(),
       validationMessages: {
         isPaginationEnabled: '',
+        pagerPlacement: '',
         pageSizes: '',
         shouldShowPagerForShortResults: ''
       }
@@ -93,6 +97,10 @@ function createTab(): PluginSettingsTab {
 function describeComponent(component: unknown): string {
   if (component instanceof ToggleComponent) {
     return 'toggle';
+  }
+
+  if (component instanceof DropdownComponent) {
+    return 'dropdown';
   }
 
   if (component instanceof TextComponent) {

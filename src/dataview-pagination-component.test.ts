@@ -201,6 +201,23 @@ describe('DataviewPaginationComponent', () => {
     expect(containerEl.querySelectorAll(':scope .dataview-pagination-pager')).toHaveLength(1);
   });
 
+  it('draws a pager above and below the page when the controls position setting is both', async () => {
+    const { api, settings } = createHarness();
+    settings.pagerPlacement = 'both';
+    api.result = { successful: true, value: { type: 'list', values: numbers() } };
+    const tableEl = createDiv();
+    const queryEl = createDiv();
+
+    await api.table(['Number'], rows(), tableEl, createOwner(), FILE_PATH);
+    await api.execute('LIST x', queryEl, createOwner(), FILE_PATH);
+    await waitForAllAsyncOperations();
+
+    for (const containerEl of [tableEl, queryEl]) {
+      expect(containerEl.querySelectorAll(':scope .dataview-pagination-pager-above .dataview-pagination-summary')).toHaveLength(1);
+      expect(containerEl.querySelectorAll(':scope .dataview-pagination-pager-below .dataview-pagination-summary')).toHaveLength(1);
+    }
+  });
+
   it('shows the original output for a query that fails', async () => {
     const { api } = createHarness();
     api.result = { successful: false };

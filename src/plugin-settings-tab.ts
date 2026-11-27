@@ -26,6 +26,21 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
         }
       }),
       this.settingEx({
+        desc: 'Where the page controls appear. Both puts a copy above the page as well, so a long page needs no scrolling to reach them.',
+        name: 'Controls position',
+        render: (setting) => {
+          setting.addDropdown((dropdown) => {
+            dropdown.addOptions({
+              below: 'Below the page',
+              // eslint-disable-next-line perfectionist/sort-objects -- The dropdown lists the options in this order.
+              above: 'Above the page',
+              both: 'Above and below'
+            });
+            this.bind({ propertyName: 'pagerPlacement', valueComponent: dropdown });
+          });
+        }
+      }),
+      this.settingEx({
         desc: 'Show the page controls even when every result fits on one page.',
         name: 'Show controls for short results',
         render: (setting) => {

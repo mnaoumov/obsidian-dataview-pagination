@@ -179,6 +179,63 @@ describe('PagedViewComponent', () => {
     expect(getSummary(containerEl)).toBe('Page 1 of 1, total items: 3');
   });
 
+  it('draws the pager below the page by default', async () => {
+    const { containerEl, view } = createHarness();
+    await view.setItems(ITEMS);
+
+    expect(getChildClasses(containerEl)).toEqual(['dataview-pagination-content', 'dataview-pagination-pager-below']);
+  });
+
+  it('draws the pager above the page when the placement is above', async () => {
+    const { containerEl, view } = createHarness({ pagerPlacement: 'above' });
+    await view.setItems(ITEMS);
+
+    expect(getChildClasses(containerEl)).toEqual(['dataview-pagination-pager-above', 'dataview-pagination-content']);
+    expect(getSummary(containerEl)).toBe('Page 1 of 5, total items: 120');
+  });
+
+  it('keeps both pagers in step when the placement is both, whichever one is used', async () => {
+    const { containerEl, renderedPages, view } = createHarness({ pagerPlacement: 'both', pageSizes: [25, 50] });
+    await view.setItems(ITEMS);
+
+    expect(getChildClasses(containerEl)).toEqual(['dataview-pagination-pager-above', 'dataview-pagination-content', 'dataview-pagination-pager-below']);
+    const aboveEl = getPager(containerEl, 'above');
+    const belowEl = getPager(containerEl, 'below');
+
+    getButton(belowEl, 'Next').click();
+    await waitForAllAsyncOperations();
+    expect(getSummaries(containerEl)).toEqual(['Page 2 of 5, total items: 120', 'Page 2 of 5, total items: 120']);
+    expect(getButton(aboveEl, '2').getAttribute('aria-current')).toBe('page');
+
+    getButton(aboveEl, 'Last').click();
+    await waitForAllAsyncOperations();
+    expect(renderedPages.at(-1)).toEqual(ITEMS.slice(100));
+    expect(getSummaries(containerEl)).toEqual(['Page 5 of 5, total items: 120', 'Page 5 of 5, total items: 120']);
+
+    const belowSelectEl = getSelect(belowEl);
+    belowSelectEl.value = '50';
+    belowSelectEl.dispatchEvent(new Event('change'));
+    await waitForAllAsyncOperations();
+    expect(getSelect(aboveEl).value).toBe('50');
+    expect(getSummaries(containerEl)).toEqual(['Page 1 of 3, total items: 120', 'Page 1 of 3, total items: 120']);
+
+    const aboveJumpEl = getJumpInput(aboveEl);
+    aboveJumpEl.value = '3';
+    aboveJumpEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await waitForAllAsyncOperations();
+    expect(renderedPages.at(-1)).toEqual(ITEMS.slice(100));
+    expect(getJumpInput(belowEl).max).toBe('3');
+    expect(getSummaries(containerEl)).toEqual(['Page 3 of 3, total items: 120', 'Page 3 of 3, total items: 120']);
+  });
+
+  it('leaves both pagers empty for a short result when the placement is both', async () => {
+    const { containerEl, view } = createHarness({ pagerPlacement: 'both' });
+    await view.setItems([1, 2, 3]);
+
+    expect(getPager(containerEl, 'above').childElementCount).toBe(0);
+    expect(getPager(containerEl, 'below').childElementCount).toBe(0);
+  });
+
   it('falls back to 50 items per page when no page size is configured', async () => {
     const { containerEl, renderedPages, view } = createHarness({ pageSizes: [] });
     await view.setItems(ITEMS);
@@ -194,6 +251,7 @@ function createHarness(params: Partial<Omit<PagedViewComponentConstructorParams<
   const pageComponents: Component[] = [];
   const view = new PagedViewComponent<number>({
     containerEl,
+    pagerPlacement: params.pagerPlacement ?? 'below',
     pageSizes: params.pageSizes ?? [25],
     renderPage(pageItems, pageEl, component): void {
       renderedPages.push(pageItems);
@@ -215,6 +273,10 @@ function getButton(containerEl: HTMLElement, label: string): HTMLButtonElement {
   return buttonEl;
 }
 
+function getChildClasses(containerEl: HTMLElement): string[] {
+  return [...containerEl.children].map((childEl) => [...childEl.classList].find((cls) => cls.startsWith('dataview-pagination-pager-')) ?? [...childEl.classList].find((cls) => cls === 'dataview-pagination-content') ?? '');
+}
+
 function getEllipsisCount(navigationEl: Element | null): number {
   return [...(navigationEl?.querySelectorAll('span') ?? [])].filter((span) => span.textContent === '...').length;
 }
@@ -227,12 +289,24 @@ function getJumpInput(containerEl: HTMLElement): HTMLInputElement {
   return jumpEl;
 }
 
+function getPager(containerEl: HTMLElement, placement: 'above' | 'below'): HTMLElement {
+  const pagerEl = containerEl.querySelector<HTMLElement>(`:scope > .dataview-pagination-pager-${placement}`);
+  if (!pagerEl) {
+    throw new Error(`No pager ${placement} the page.`);
+  }
+  return pagerEl;
+}
+
 function getSelect(containerEl: HTMLElement): HTMLSelectElement {
   const selectEl = containerEl.querySelector<HTMLSelectElement>(':scope .dataview-pagination-options select');
   if (!selectEl) {
     throw new Error('No page size dropdown.');
   }
   return selectEl;
+}
+
+function getSummaries(containerEl: HTMLElement): string[] {
+  return [...containerEl.querySelectorAll('.dataview-pagination-summary')].map((summaryEl) => summaryEl.textContent);
 }
 
 function getSummary(containerEl: HTMLElement): string {

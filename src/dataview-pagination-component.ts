@@ -74,6 +74,7 @@ export class DataviewPaginationComponent extends MonkeyAroundComponent {
     const settings = this.getSettings();
     return new PagedViewComponent<unknown>({
       containerEl,
+      pagerPlacement: settings.pagerPlacement,
       pageSizes: parsePageSizes(settings.pageSizes),
       renderPage,
       shouldShowPagerForShortResults: settings.shouldShowPagerForShortResults
@@ -112,6 +113,7 @@ export class DataviewPaginationComponent extends MonkeyAroundComponent {
             api,
             containerEl: container,
             filePath,
+            pagerPlacement: settings.pagerPlacement,
             pageSizes: parsePageSizes(settings.pageSizes),
             renderFallback: (fallbackEl, fallbackComponent): Promise<void> => originalMethodBound(source, fallbackEl, fallbackComponent, filePath),
             renderList: (values, pageEl, pageComponent): Promise<void> => this.renderUnpaged(() => api.list(values, pageEl, pageComponent, filePath)),
