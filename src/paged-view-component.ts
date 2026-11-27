@@ -31,6 +31,7 @@ export interface PagedViewComponentConstructorParams<T> {
 export type RenderPage<T> = (pageItems: T[], containerEl: HTMLElement, component: Component) => Promise<void> | void;
 
 interface PagedViewComponentAddPageButtonParams {
+  readonly accessibleLabel: string;
   readonly containerEl: HTMLElement;
   readonly isDisabled: boolean;
   readonly label: string;
@@ -43,6 +44,9 @@ interface PagedViewComponentAddPageButtonParams {
  * Every page gets its own child component, so whatever the previous page rendered is unloaded with it. Every pager is
  * redrawn from the same state on each render, so two pagers never disagree. When asked to, a page change made from a
  * pager scrolls the view's top into sight, so the reader starts the new page at its first row; a refresh never scrolls.
+ *
+ * Each pager is a `nav` landmark whose controls carry accessible names. One visually hidden live region, kept outside
+ * the pagers so that two pagers announce once, reads the page summary out whenever it changes.
  */
 export class PagedViewComponent<T> extends ComponentEx {
   private readonly containerEl: HTMLElement;
@@ -56,6 +60,7 @@ export class PagedViewComponent<T> extends ComponentEx {
   private readonly renderPage: RenderPage<T>;
   private readonly shouldScrollToTopOnPageChange: boolean;
   private readonly shouldShowPagerForShortResults: boolean;
+  private readonly statusEl: HTMLElement;
 
   public constructor(params: PagedViewComponentConstructorParams<T>) {
     super();
@@ -66,15 +71,20 @@ export class PagedViewComponent<T> extends ComponentEx {
     this.shouldShowPagerForShortResults = params.shouldShowPagerForShortResults;
     const { containerEl, pagerPlacement } = params;
     this.containerEl = containerEl;
+    const isBoth = pagerPlacement === 'both';
     const pagerEls: HTMLElement[] = [];
     if (pagerPlacement !== 'below') {
-      pagerEls.push(containerEl.createDiv({ cls: ['dataview-pagination-pager', 'dataview-pagination-pager-above'] }));
+      pagerEls.push(createPagerEl(containerEl, 'above', isBoth ? 'Pagination above the results' : 'Pagination'));
     }
     this.contentEl = containerEl.createDiv({ cls: 'dataview-pagination-content' });
     if (pagerPlacement !== 'above') {
-      pagerEls.push(containerEl.createDiv({ cls: ['dataview-pagination-pager', 'dataview-pagination-pager-below'] }));
+      pagerEls.push(createPagerEl(containerEl, 'below', isBoth ? 'Pagination below the results' : 'Pagination'));
     }
     this.pagerEls = pagerEls;
+    this.statusEl = containerEl.createDiv({
+      attr: { 'aria-atomic': 'true', 'aria-live': 'polite', 'role': 'status' },
+      cls: 'dataview-pagination-status'
+    });
   }
 
   /**
@@ -88,7 +98,7 @@ export class PagedViewComponent<T> extends ComponentEx {
   }
 
   private addPageButton(params: PagedViewComponentAddPageButtonParams): HTMLButtonElement {
-    const buttonEl = params.containerEl.createEl('button', { text: params.label });
+    const buttonEl = params.containerEl.createEl('button', { attr: { 'aria-label': params.accessibleLabel }, text: params.label });
     buttonEl.disabled = params.isDisabled;
     buttonEl.addEventListener('click', () => {
       invokeAsyncSafely(() => this.goToPage(params.targetPage));
@@ -98,6 +108,10 @@ export class PagedViewComponent<T> extends ComponentEx {
 
   private getPageSizeChoices(): readonly number[] {
     return this.pageSizes.length > 0 ? this.pageSizes : [this.pageSize];
+  }
+
+  private getSummaryText(pageCount: number): string {
+    return `Page ${String(this.page)} of ${String(pageCount)}, total items: ${String(this.items.length)}`;
   }
 
   private async goToPage(page: number): Promise<void> {
@@ -133,19 +147,32 @@ export class PagedViewComponent<T> extends ComponentEx {
         this.renderPager(pagerEl, pageCount);
       }
     }
+
+    // Only a changed text is written, so a refresh that leaves the summary as it was announces nothing.
+    const statusText = isPagerVisible ? this.getSummaryText(pageCount) : '';
+    if (this.statusEl.textContent !== statusText) {
+      this.statusEl.setText(statusText);
+    }
   }
 
   private renderPager(pagerEl: HTMLElement, pageCount: number): void {
     const navigationEl = pagerEl.createDiv({ cls: 'dataview-pagination-navigation' });
-    this.addPageButton({ containerEl: navigationEl, isDisabled: this.page === 1, label: 'First', targetPage: 1 });
-    this.addPageButton({ containerEl: navigationEl, isDisabled: this.page === 1, label: 'Previous', targetPage: this.page - 1 });
+    this.addPageButton({ accessibleLabel: 'First page', containerEl: navigationEl, isDisabled: this.page === 1, label: 'First', targetPage: 1 });
+    this.addPageButton({
+      accessibleLabel: 'Previous page',
+      containerEl: navigationEl,
+      isDisabled: this.page === 1,
+      label: 'Previous',
+      targetPage: this.page - 1
+    });
 
     const visiblePages = getVisiblePageNumbers(this.page, pageCount);
     if (!visiblePages.includes(1)) {
-      navigationEl.createSpan({ text: '...' });
+      createEllipsis(navigationEl);
     }
     for (const visiblePage of visiblePages) {
       const buttonEl = this.addPageButton({
+        accessibleLabel: `Page ${String(visiblePage)}`,
         containerEl: navigationEl,
         isDisabled: false,
         label: String(visiblePage),
@@ -159,15 +186,27 @@ export class PagedViewComponent<T> extends ComponentEx {
       buttonEl.setAttr('aria-current', 'page');
     }
     if (!visiblePages.includes(pageCount)) {
-      navigationEl.createSpan({ text: '...' });
+      createEllipsis(navigationEl);
     }
 
-    this.addPageButton({ containerEl: navigationEl, isDisabled: this.page === pageCount, label: 'Next', targetPage: this.page + 1 });
-    this.addPageButton({ containerEl: navigationEl, isDisabled: this.page === pageCount, label: 'Last', targetPage: pageCount });
+    this.addPageButton({
+      accessibleLabel: 'Next page',
+      containerEl: navigationEl,
+      isDisabled: this.page === pageCount,
+      label: 'Next',
+      targetPage: this.page + 1
+    });
+    this.addPageButton({
+      accessibleLabel: 'Last page',
+      containerEl: navigationEl,
+      isDisabled: this.page === pageCount,
+      label: 'Last',
+      targetPage: pageCount
+    });
 
     const optionsEl = pagerEl.createDiv({ cls: 'dataview-pagination-options' });
-    optionsEl.createSpan({ text: 'Items per page: ' });
-    const selectEl = optionsEl.createEl('select', { cls: 'dropdown' });
+    optionsEl.createSpan({ attr: { 'aria-hidden': 'true' }, text: 'Items per page: ' });
+    const selectEl = optionsEl.createEl('select', { attr: { 'aria-label': 'Items per page' }, cls: 'dropdown' });
     for (const pageSize of this.getPageSizeChoices()) {
       selectEl.createEl('option', { text: String(pageSize), value: String(pageSize) });
     }
@@ -177,17 +216,28 @@ export class PagedViewComponent<T> extends ComponentEx {
       invokeAsyncSafely(() => this.goToPage(1));
     });
 
-    optionsEl.createSpan({ text: 'Jump to page: ' });
-    const jumpEl = optionsEl.createEl('input', { attr: { max: pageCount, min: 1 }, type: 'number' });
+    optionsEl.createSpan({ attr: { 'aria-hidden': 'true' }, text: 'Jump to page: ' });
+    const jumpEl = optionsEl.createEl('input', {
+      attr: { 'aria-label': `Jump to page, 1 to ${String(pageCount)}`, 'max': pageCount, 'min': 1 },
+      type: 'number'
+    });
     jumpEl.addEventListener('keydown', (event_) => {
       if (event_.key === 'Enter' && jumpEl.value !== '' && jumpEl.reportValidity()) {
         invokeAsyncSafely(() => this.goToPage(Number(jumpEl.value)));
       }
     });
 
-    pagerEl.createDiv({
-      cls: 'dataview-pagination-summary',
-      text: `Page ${String(this.page)} of ${String(pageCount)}, total items: ${String(this.items.length)}`
-    });
+    pagerEl.createDiv({ cls: 'dataview-pagination-summary', text: this.getSummaryText(pageCount) });
   }
+}
+
+function createEllipsis(navigationEl: HTMLElement): void {
+  navigationEl.createSpan({ attr: { 'aria-hidden': 'true' }, text: '...' });
+}
+
+function createPagerEl(containerEl: HTMLElement, placement: 'above' | 'below', label: string): HTMLElement {
+  return containerEl.createEl('nav', {
+    attr: { 'aria-label': label },
+    cls: ['dataview-pagination-pager', `dataview-pagination-pager-${placement}`]
+  });
 }

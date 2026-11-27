@@ -185,14 +185,14 @@ describe('PagedViewComponent', () => {
     const { containerEl, view } = createHarness();
     await view.setItems(ITEMS);
 
-    expect(getChildClasses(containerEl)).toEqual(['dataview-pagination-content', 'dataview-pagination-pager-below']);
+    expect(getChildClasses(containerEl)).toEqual(['dataview-pagination-content', 'dataview-pagination-pager-below', 'dataview-pagination-status']);
   });
 
   it('draws the pager above the page when the placement is above', async () => {
     const { containerEl, view } = createHarness({ pagerPlacement: 'above' });
     await view.setItems(ITEMS);
 
-    expect(getChildClasses(containerEl)).toEqual(['dataview-pagination-pager-above', 'dataview-pagination-content']);
+    expect(getChildClasses(containerEl)).toEqual(['dataview-pagination-pager-above', 'dataview-pagination-content', 'dataview-pagination-status']);
     expect(getSummary(containerEl)).toBe('Page 1 of 5, total items: 120');
   });
 
@@ -200,7 +200,7 @@ describe('PagedViewComponent', () => {
     const { containerEl, renderedPages, view } = createHarness({ pagerPlacement: 'both', pageSizes: [25, 50] });
     await view.setItems(ITEMS);
 
-    expect(getChildClasses(containerEl)).toEqual(['dataview-pagination-pager-above', 'dataview-pagination-content', 'dataview-pagination-pager-below']);
+    expect(getChildClasses(containerEl)).toEqual(['dataview-pagination-pager-above', 'dataview-pagination-content', 'dataview-pagination-pager-below', 'dataview-pagination-status']);
     const aboveEl = getPager(containerEl, 'above');
     const belowEl = getPager(containerEl, 'below');
 
@@ -291,6 +291,63 @@ describe('PagedViewComponent', () => {
     expect(scrollCalls).toEqual([]);
   });
 
+  it('announces the page summary through one live region, only when it changes', async () => {
+    const { containerEl, view } = createHarness({ pagerPlacement: 'both' });
+    const statusEls = containerEl.querySelectorAll('[aria-live]');
+    expect(statusEls).toHaveLength(1);
+    const statusEl = getStatus(containerEl);
+    expect(statusEl.getAttribute('aria-live')).toBe('polite');
+    expect(statusEl.getAttribute('aria-atomic')).toBe('true');
+    expect(statusEl.getAttribute('role')).toBe('status');
+    expect(statusEl.closest('nav')).toBeNull();
+
+    await view.setItems(ITEMS);
+    expect(statusEl.textContent).toBe('Page 1 of 5, total items: 120');
+    const firstTextNode = statusEl.firstChild;
+
+    await view.setItems([...ITEMS]);
+    expect(statusEl.firstChild).toBe(firstTextNode);
+
+    getButton(getPager(containerEl, 'below'), 'Next').click();
+    await waitForAllAsyncOperations();
+    expect(statusEl.textContent).toBe('Page 2 of 5, total items: 120');
+
+    await view.setItems([1, 2, 3]);
+    expect(statusEl.textContent).toBe('');
+  });
+
+  it('makes each pager a labelled navigation landmark', async () => {
+    const single = createHarness();
+    await single.view.setItems(ITEMS);
+    expect(getPager(single.containerEl, 'below').tagName).toBe('NAV');
+    expect(getPager(single.containerEl, 'below').getAttribute('aria-label')).toBe('Pagination');
+
+    const both = createHarness({ pagerPlacement: 'both' });
+    await both.view.setItems(ITEMS);
+    expect(getPager(both.containerEl, 'above').getAttribute('aria-label')).toBe('Pagination above the results');
+    expect(getPager(both.containerEl, 'below').getAttribute('aria-label')).toBe('Pagination below the results');
+  });
+
+  it('gives every pager control an accessible name and hides the decorative text', async () => {
+    const { containerEl, view } = createHarness({ pageSizes: [10] });
+    await view.setItems(ITEMS);
+    getButton(containerEl, '3').click();
+    await waitForAllAsyncOperations();
+    getButton(containerEl, '5').click();
+    await waitForAllAsyncOperations();
+
+    const labels = [...containerEl.querySelectorAll(':scope .dataview-pagination-navigation button')].map((buttonEl) => buttonEl.getAttribute('aria-label'));
+    expect(labels).toEqual(['First page', 'Previous page', 'Page 3', 'Page 4', 'Page 5', 'Page 6', 'Page 7', 'Next page', 'Last page']);
+    const ellipses = [...containerEl.querySelectorAll(':scope .dataview-pagination-navigation span')];
+    expect(ellipses).toHaveLength(2);
+    expect(ellipses.every((span) => span.getAttribute('aria-hidden') === 'true')).toBe(true);
+
+    expect(getSelect(containerEl).getAttribute('aria-label')).toBe('Items per page');
+    expect(getJumpInput(containerEl).getAttribute('aria-label')).toBe('Jump to page, 1 to 12');
+    const optionTexts = [...containerEl.querySelectorAll(':scope .dataview-pagination-options > span')];
+    expect(optionTexts.every((span) => span.getAttribute('aria-hidden') === 'true')).toBe(true);
+  });
+
   it('falls back to 50 items per page when no page size is configured', async () => {
     const { containerEl, renderedPages, view } = createHarness({ pageSizes: [] });
     await view.setItems(ITEMS);
@@ -334,7 +391,7 @@ function getButton(containerEl: HTMLElement, label: string): HTMLButtonElement {
 }
 
 function getChildClasses(containerEl: HTMLElement): string[] {
-  return [...containerEl.children].map((childEl) => [...childEl.classList].find((cls) => cls.startsWith('dataview-pagination-pager-')) ?? [...childEl.classList].find((cls) => cls === 'dataview-pagination-content') ?? '');
+  return [...containerEl.children].map((childEl) => [...childEl.classList].find((cls) => cls.startsWith('dataview-pagination-pager-')) ?? [...childEl.classList].find((cls) => cls === 'dataview-pagination-content' || cls === 'dataview-pagination-status') ?? '');
 }
 
 function getEllipsisCount(navigationEl: Element | null): number {
@@ -363,6 +420,14 @@ function getSelect(containerEl: HTMLElement): HTMLSelectElement {
     throw new Error('No page size dropdown.');
   }
   return selectEl;
+}
+
+function getStatus(containerEl: HTMLElement): HTMLElement {
+  const statusEl = containerEl.querySelector<HTMLElement>(':scope > .dataview-pagination-status');
+  if (!statusEl) {
+    throw new Error('No status region.');
+  }
+  return statusEl;
 }
 
 function getSummaries(containerEl: HTMLElement): string[] {
