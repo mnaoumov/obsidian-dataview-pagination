@@ -201,6 +201,7 @@ async function createHarness(result: DataviewResult): Promise<Harness> {
       tableCalls.push({ headers, values });
       return noopAsync();
     },
+    shouldScrollToTopOnPageChange: false,
     shouldShowPagerForShortResults: false,
     source: 'TABLE x'
   });

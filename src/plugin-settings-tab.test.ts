@@ -28,13 +28,14 @@ interface BoundRow {
 }
 
 describe('PluginSettingsTab', () => {
-  it('should declare the four settings by name, in order', () => {
+  it('should declare the five settings by name, in order', () => {
     const tab = createTab();
 
     expect(tab.getSettingDefinitions().map((definition) => 'name' in definition ? definition.name : '')).toEqual([
       'Enable pagination',
       'Items per page',
       'Controls position',
+      'Scroll to the top on page change',
       'Show controls for short results'
     ]);
   });
@@ -56,6 +57,7 @@ describe('PluginSettingsTab', () => {
       { componentType: 'toggle', propertyName: 'isPaginationEnabled' },
       { componentType: 'text', propertyName: 'pageSizes' },
       { componentType: 'dropdown', propertyName: 'pagerPlacement' },
+      { componentType: 'toggle', propertyName: 'shouldScrollToTopOnPageChange' },
       { componentType: 'toggle', propertyName: 'shouldShowPagerForShortResults' }
     ]);
   });
@@ -73,6 +75,7 @@ function createTab(): PluginSettingsTab {
         isPaginationEnabled: '',
         pagerPlacement: '',
         pageSizes: '',
+        shouldScrollToTopOnPageChange: '',
         shouldShowPagerForShortResults: ''
       }
     }

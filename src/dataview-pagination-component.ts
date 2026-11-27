@@ -77,6 +77,7 @@ export class DataviewPaginationComponent extends MonkeyAroundComponent {
       pagerPlacement: settings.pagerPlacement,
       pageSizes: parsePageSizes(settings.pageSizes),
       renderPage,
+      shouldScrollToTopOnPageChange: settings.shouldScrollToTopOnPageChange,
       shouldShowPagerForShortResults: settings.shouldShowPagerForShortResults
     });
   }
@@ -118,6 +119,7 @@ export class DataviewPaginationComponent extends MonkeyAroundComponent {
             renderFallback: (fallbackEl, fallbackComponent): Promise<void> => originalMethodBound(source, fallbackEl, fallbackComponent, filePath),
             renderList: (values, pageEl, pageComponent): Promise<void> => this.renderUnpaged(() => api.list(values, pageEl, pageComponent, filePath)),
             renderTable: (headers, values, pageEl, pageComponent): Promise<void> => this.renderUnpaged(() => api.table(headers, values, pageEl, pageComponent, filePath)),
+            shouldScrollToTopOnPageChange: settings.shouldScrollToTopOnPageChange,
             shouldShowPagerForShortResults: settings.shouldShowPagerForShortResults,
             source
           })

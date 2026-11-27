@@ -5,7 +5,8 @@ import {
   afterEach,
   describe,
   expect,
-  it
+  it,
+  vi
 } from 'vitest';
 
 import type { PagedViewComponentConstructorParams } from './paged-view-component.ts';
@@ -19,6 +20,7 @@ interface Harness {
   readonly containerEl: HTMLElement;
   readonly pageComponents: Component[];
   readonly renderedPages: number[][];
+  readonly scrollCalls: ScrollIntoViewOptions[];
   readonly view: PagedViewComponent<number>;
 }
 
@@ -236,6 +238,59 @@ describe('PagedViewComponent', () => {
     expect(getPager(containerEl, 'below').childElementCount).toBe(0);
   });
 
+  it('scrolls the view top into sight after every kind of page change when asked to', async () => {
+    const { containerEl, scrollCalls, view } = createHarness({ pageSizes: [25, 50], shouldScrollToTopOnPageChange: true });
+    await view.setItems(ITEMS);
+    expect(scrollCalls).toEqual([]);
+
+    getButton(containerEl, 'Next').click();
+    await waitForAllAsyncOperations();
+    getButton(containerEl, '3').click();
+    await waitForAllAsyncOperations();
+    getButton(containerEl, 'Previous').click();
+    await waitForAllAsyncOperations();
+    getButton(containerEl, 'Last').click();
+    await waitForAllAsyncOperations();
+    getButton(containerEl, 'First').click();
+    await waitForAllAsyncOperations();
+
+    const jumpEl = getJumpInput(containerEl);
+    jumpEl.value = '4';
+    jumpEl.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await waitForAllAsyncOperations();
+
+    const selectEl = getSelect(containerEl);
+    selectEl.value = '50';
+    selectEl.dispatchEvent(new Event('change'));
+    await waitForAllAsyncOperations();
+
+    expect(scrollCalls).toEqual(Array.from({ length: 7 }, () => ({ block: 'start' })));
+  });
+
+  it('does not scroll on a refresh, even when asked to scroll on page changes', async () => {
+    const { containerEl, scrollCalls, view } = createHarness({ shouldScrollToTopOnPageChange: true });
+    await view.setItems(ITEMS);
+    getButton(containerEl, 'Next').click();
+    await waitForAllAsyncOperations();
+    expect(scrollCalls).toHaveLength(1);
+
+    await view.setItems(ITEMS.slice(0, 100));
+
+    expect(getSummary(containerEl)).toBe('Page 2 of 4, total items: 100');
+    expect(scrollCalls).toHaveLength(1);
+  });
+
+  it('does not scroll after a page change by default', async () => {
+    const { containerEl, scrollCalls, view } = createHarness();
+    await view.setItems(ITEMS);
+
+    getButton(containerEl, 'Next').click();
+    await waitForAllAsyncOperations();
+
+    expect(getSummary(containerEl)).toBe('Page 2 of 5, total items: 120');
+    expect(scrollCalls).toEqual([]);
+  });
+
   it('falls back to 50 items per page when no page size is configured', async () => {
     const { containerEl, renderedPages, view } = createHarness({ pageSizes: [] });
     await view.setItems(ITEMS);
@@ -249,6 +304,10 @@ function createHarness(params: Partial<Omit<PagedViewComponentConstructorParams<
   const containerEl = createDiv();
   const renderedPages: number[][] = [];
   const pageComponents: Component[] = [];
+  const scrollCalls: ScrollIntoViewOptions[] = [];
+  containerEl.scrollIntoView = vi.fn((options?: boolean | ScrollIntoViewOptions): void => {
+    scrollCalls.push(typeof options === 'object' ? options : {});
+  });
   const view = new PagedViewComponent<number>({
     containerEl,
     pagerPlacement: params.pagerPlacement ?? 'below',
@@ -258,11 +317,12 @@ function createHarness(params: Partial<Omit<PagedViewComponentConstructorParams<
       pageComponents.push(component);
       pageEl.createDiv({ text: pageItems.join(',') });
     },
+    shouldScrollToTopOnPageChange: params.shouldScrollToTopOnPageChange ?? false,
     shouldShowPagerForShortResults: params.shouldShowPagerForShortResults ?? false
   });
   view.load();
   views.push(view);
-  return { containerEl, pageComponents, renderedPages, view };
+  return { containerEl, pageComponents, renderedPages, scrollCalls, view };
 }
 
 function getButton(containerEl: HTMLElement, label: string): HTMLButtonElement {

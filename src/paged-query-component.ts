@@ -23,6 +23,7 @@ export interface PagedQueryComponentConstructorParams {
   readonly renderFallback: (containerEl: HTMLElement, component: Component) => Promise<void>;
   readonly renderList: (values: unknown[], containerEl: HTMLElement, component: Component) => Promise<void>;
   readonly renderTable: (headers: string[], values: unknown[][], containerEl: HTMLElement, component: Component) => Promise<void>;
+  readonly shouldScrollToTopOnPageChange: boolean;
   readonly shouldShowPagerForShortResults: boolean;
   readonly source: string;
 }
@@ -42,8 +43,8 @@ export class PagedQueryComponent extends ComponentEx {
 
   public constructor(params: PagedQueryComponentConstructorParams) {
     super();
-    const { api, containerEl, filePath, pagerPlacement, pageSizes, renderFallback, renderList, renderTable, shouldShowPagerForShortResults, source } = params;
-    this.params = { api, containerEl, filePath, pagerPlacement, pageSizes, renderFallback, renderList, renderTable, shouldShowPagerForShortResults, source };
+    const { api, containerEl, filePath, pagerPlacement, pageSizes, renderFallback, renderList, renderTable, shouldScrollToTopOnPageChange, shouldShowPagerForShortResults, source } = params;
+    this.params = { api, containerEl, filePath, pagerPlacement, pageSizes, renderFallback, renderList, renderTable, shouldScrollToTopOnPageChange, shouldShowPagerForShortResults, source };
   }
 
   public override onload(): void {
@@ -57,11 +58,11 @@ export class PagedQueryComponent extends ComponentEx {
   }
 
   private createPagedView(value: DataviewQueryResult): PagedViewComponent<unknown> {
-    const { containerEl, pagerPlacement, pageSizes, renderList, renderTable, shouldShowPagerForShortResults } = this.params;
+    const { containerEl, pagerPlacement, pageSizes, renderList, renderTable, shouldScrollToTopOnPageChange, shouldShowPagerForShortResults } = this.params;
     const renderPage: RenderPage<unknown> = value.type === 'table'
       ? (pageItems, pageEl, component): Promise<void> => renderTable(value.headers, pageItems as unknown[][], pageEl, component)
       : (pageItems, pageEl, component): Promise<void> => renderList(pageItems, pageEl, component);
-    return new PagedViewComponent({ containerEl, pagerPlacement, pageSizes, renderPage, shouldShowPagerForShortResults });
+    return new PagedViewComponent({ containerEl, pagerPlacement, pageSizes, renderPage, shouldScrollToTopOnPageChange, shouldShowPagerForShortResults });
   }
 
   private maybeRefresh(): void {
