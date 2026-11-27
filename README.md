@@ -38,7 +38,7 @@ It needs `Dataview` installed and enabled.
 
 A copy of the vault ships with every release. You can access it via any of the following:
 
-1. Running the **`Dataview Pagination`: Open demo vault** command.
+1. Running the **`Dataview Pagination`: Open demo vault** command, on desktop. The command is not available on mobile, so use the next option there.
 2. Downloading `dataview-pagination-demo-vault.zip` from the [Releases](https://github.com/mnaoumov/obsidian-dataview-pagination/releases). It unzips into a single `dataview-pagination-demo-vault-<version>` folder.
 3. Browsing its source in [`demo-vault/`](./demo-vault/README.md) in this repository.
 
