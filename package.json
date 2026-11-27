@@ -1,6 +1,6 @@
 {
   "name": "dataview-pagination",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Adds pagination to Dataview tables and lists.",
   "type": "module",
   "main": "main.js",
