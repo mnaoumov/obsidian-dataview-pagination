@@ -2,6 +2,8 @@ import { ComponentEx } from '@mnaoumov/obsidian-lib/components/component-ex';
 import { invokeAsyncSafely } from '@mnaoumov/typescript-lib/async';
 import { Component } from 'obsidian';
 
+import type { PagerPlacement } from './pagination.ts';
+
 import {
   clampPage,
   getPageCount,
@@ -16,6 +18,7 @@ const FALLBACK_PAGE_SIZE = 50;
  */
 export interface PagedViewComponentConstructorParams<T> {
   readonly containerEl: HTMLElement;
+  readonly pagerPlacement: PagerPlacement;
   readonly pageSizes: readonly number[];
   readonly renderPage: RenderPage<T>;
   readonly shouldShowPagerForShortResults: boolean;
@@ -34,16 +37,17 @@ interface PagedViewComponentAddPageButtonParams {
 }
 
 /**
- * Shows a list of items one page at a time, with page controls below it.
+ * Shows a list of items one page at a time, with page controls below it, above it, or both.
  *
- * Every page gets its own child component, so whatever the previous page rendered is unloaded with it.
+ * Every page gets its own child component, so whatever the previous page rendered is unloaded with it. Every pager is
+ * redrawn from the same state on each render, so two pagers never disagree.
  */
 export class PagedViewComponent<T> extends ComponentEx {
   private readonly contentEl: HTMLElement;
   private items: T[] = [];
   private page = 1;
   private pageComponent: Component | null = null;
-  private readonly pagerEl: HTMLElement;
+  private readonly pagerEls: readonly HTMLElement[];
   private pageSize: number;
   private readonly pageSizes: readonly number[];
   private readonly renderPage: RenderPage<T>;
@@ -55,8 +59,16 @@ export class PagedViewComponent<T> extends ComponentEx {
     this.pageSize = params.pageSizes[0] ?? FALLBACK_PAGE_SIZE;
     this.renderPage = params.renderPage;
     this.shouldShowPagerForShortResults = params.shouldShowPagerForShortResults;
-    this.contentEl = params.containerEl.createDiv({ cls: 'dataview-pagination-content' });
-    this.pagerEl = params.containerEl.createDiv({ cls: 'dataview-pagination-pager' });
+    const { containerEl, pagerPlacement } = params;
+    const pagerEls: HTMLElement[] = [];
+    if (pagerPlacement !== 'below') {
+      pagerEls.push(containerEl.createDiv({ cls: ['dataview-pagination-pager', 'dataview-pagination-pager-above'] }));
+    }
+    this.contentEl = containerEl.createDiv({ cls: 'dataview-pagination-content' });
+    if (pagerPlacement !== 'above') {
+      pagerEls.push(containerEl.createDiv({ cls: ['dataview-pagination-pager', 'dataview-pagination-pager-below'] }));
+    }
+    this.pagerEls = pagerEls;
   }
 
   /**
@@ -106,14 +118,16 @@ export class PagedViewComponent<T> extends ComponentEx {
     const pageItems = isPagerVisible ? getPageItems(this.items, this.page, this.pageSize) : this.items;
     await this.renderPage(pageItems, this.contentEl, this.pageComponent);
 
-    this.pagerEl.empty();
-    if (isPagerVisible) {
-      this.renderPager(pageCount);
+    for (const pagerEl of this.pagerEls) {
+      pagerEl.empty();
+      if (isPagerVisible) {
+        this.renderPager(pagerEl, pageCount);
+      }
     }
   }
 
-  private renderPager(pageCount: number): void {
-    const navigationEl = this.pagerEl.createDiv({ cls: 'dataview-pagination-navigation' });
+  private renderPager(pagerEl: HTMLElement, pageCount: number): void {
+    const navigationEl = pagerEl.createDiv({ cls: 'dataview-pagination-navigation' });
     this.addPageButton({ containerEl: navigationEl, isDisabled: this.page === 1, label: 'First', targetPage: 1 });
     this.addPageButton({ containerEl: navigationEl, isDisabled: this.page === 1, label: 'Previous', targetPage: this.page - 1 });
 
@@ -142,7 +156,7 @@ export class PagedViewComponent<T> extends ComponentEx {
     this.addPageButton({ containerEl: navigationEl, isDisabled: this.page === pageCount, label: 'Next', targetPage: this.page + 1 });
     this.addPageButton({ containerEl: navigationEl, isDisabled: this.page === pageCount, label: 'Last', targetPage: pageCount });
 
-    const optionsEl = this.pagerEl.createDiv({ cls: 'dataview-pagination-options' });
+    const optionsEl = pagerEl.createDiv({ cls: 'dataview-pagination-options' });
     optionsEl.createSpan({ text: 'Items per page: ' });
     const selectEl = optionsEl.createEl('select', { cls: 'dropdown' });
     for (const pageSize of this.getPageSizeChoices()) {
@@ -162,7 +176,7 @@ export class PagedViewComponent<T> extends ComponentEx {
       }
     });
 
-    this.pagerEl.createDiv({
+    pagerEl.createDiv({
       cls: 'dataview-pagination-summary',
       text: `Page ${String(this.page)} of ${String(pageCount)}, total items: ${String(this.items.length)}`
     });

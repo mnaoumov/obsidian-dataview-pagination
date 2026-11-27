@@ -16,9 +16,27 @@ interface DataviewIndex {
   readonly initialized: boolean;
 }
 
+interface DataviewPaginationPluginHost {
+  readonly pluginSettingsComponent: DataviewPaginationSettingsHost;
+}
+
+interface DataviewPaginationSettingsHost {
+  readonly editAndSave: (settingsEditor: (settings: PagerPlacementSettings) => void) => Promise<void>;
+}
+
 interface DataviewPluginHost {
   readonly index: DataviewIndex;
   readonly updateSettings: (settings: Record<string, boolean>) => Promise<void>;
+}
+
+interface PagerCounts {
+  readonly above: number;
+  readonly below: number;
+}
+
+interface PagerPlacementSettings {
+  // eslint-disable-next-line typescript-dev-toolkit/readonly-interface-members -- The settings editor writes the value in place.
+  pagerPlacement: string;
 }
 
 const DATAVIEW_VERSION = '0.5.70';
@@ -191,6 +209,33 @@ describe('paging real Dataview views', () => {
     expect(await waitForFirstCell(String((JUMP_PAGE - 1) * PAGE_SIZE + 1))).toBe(String((JUMP_PAGE - 1) * PAGE_SIZE + 1));
   });
 
+  it('draws the pager above and below the page when the controls position is both, and the two stay in step', { timeout: TEST_TIMEOUT_IN_MILLISECONDS }, async () => {
+    await setPagerPlacement('both');
+    try {
+      await openNote('Both.md', TABLE_NOTE_CONTENT);
+      const firstSummaries = await waitForSummaries(`Page 1 of 5, total items: ${String(ITEM_COUNT)}`);
+      expect(firstSummaries).toEqual({ above: 1, below: 1 });
+
+      await evalInObsidian({
+        async callback({ app, lib: { clickElement } }): Promise<void> {
+          const pagerEl = app.workspace.getMostRecentLeaf()?.view.containerEl.querySelector(':scope .markdown-reading-view .dataview-pagination-pager-above');
+          const buttonEl = [...(pagerEl?.querySelectorAll<HTMLButtonElement>(':scope .dataview-pagination-navigation button') ?? [])].find((el) => el.textContent === 'Next');
+          if (!buttonEl) {
+            throw new Error('No Next button above the page.');
+          }
+          buttonEl.scrollIntoView({ block: 'center' });
+          await clickElement({ element: buttonEl });
+        },
+        vaultPath: vaultPath()
+      });
+
+      expect(await waitForSummaries(`Page 2 of 5, total items: ${String(ITEM_COUNT)}`)).toEqual({ above: 1, below: 1 });
+      expect(await waitForFirstCell(String(PAGE_SIZE + 1))).toBe(String(PAGE_SIZE + 1));
+    } finally {
+      await setPagerPlacement('below');
+    }
+  });
+
   it('runs the query again when the vault changes, keeping the current page', { timeout: TEST_TIMEOUT_IN_MILLISECONDS }, async () => {
     await openNote('Refresh.md', TABLE_NOTE_CONTENT);
     await waitForSummary(`Page 1 of 5, total items: ${String(ITEM_COUNT)}`);
@@ -274,6 +319,28 @@ async function openNote(notePath: string, noteContent: string): Promise<void> {
   });
 }
 
+/**
+ * Changes the controls position setting through the plugin's own settings component, as the settings tab does.
+ *
+ * @param pagerPlacement - The new placement.
+ */
+async function setPagerPlacement(pagerPlacement: 'above' | 'below' | 'both'): Promise<void> {
+  await evalInObsidian({
+    async callback({ app, placement }): Promise<void> {
+      // eslint-disable-next-line no-restricted-syntax -- A closure runs inside Obsidian, where no cast helper can be imported.
+      const plugin = app.plugins.getPlugin('dataview-pagination') as unknown as DataviewPaginationPluginHost | null;
+      if (!plugin) {
+        throw new Error('Dataview Pagination is not loaded.');
+      }
+      await plugin.pluginSettingsComponent.editAndSave((settings) => {
+        settings.pagerPlacement = placement;
+      });
+    },
+    input: { placement: pagerPlacement },
+    vaultPath: vaultPath()
+  });
+}
+
 function vaultPath(): string {
   return getTemporaryVault().path;
 }
@@ -285,6 +352,23 @@ async function waitForFirstCell(expectedText: string): Promise<string> {
     timeoutInMilliseconds: POLL_TIMEOUT_IN_MILLISECONDS,
     timeoutMessage: `the first cell to read ${expectedText}`,
     until: (text) => text === expectedText,
+    vaultPath: vaultPath()
+  });
+}
+
+async function waitForSummaries(expectedSummary: string): Promise<PagerCounts> {
+  return pollInObsidian({
+    input: { expected: expectedSummary },
+    poll: ({ app, expected }) => {
+      const readingViewEl = app.workspace.getMostRecentLeaf()?.view.containerEl.querySelector(':scope .markdown-reading-view');
+      function count(placement: string): number {
+        return [...(readingViewEl?.querySelectorAll(`:scope .dataview-pagination-pager-${placement} .dataview-pagination-summary`) ?? [])].filter((el) => el.textContent === expected).length;
+      }
+      return { above: count('above'), below: count('below') };
+    },
+    timeoutInMilliseconds: POLL_TIMEOUT_IN_MILLISECONDS,
+    timeoutMessage: `both pagers to read ${expectedSummary}`,
+    until: (counts) => counts.above === 1 && counts.below === 1,
     vaultPath: vaultPath()
   });
 }

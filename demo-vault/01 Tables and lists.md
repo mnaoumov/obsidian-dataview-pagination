@@ -2,7 +2,7 @@
 
 Every `TABLE` and `LIST` result longer than the smallest **Items per page** choice gets page controls. All the views below read the 120 numbers in [Numbers](<./Materials/01 Tables and lists/Numbers.md>).
 
-The controls are **First**, **Previous**, the nearby page numbers, **Next** and **Last**, a page-size dropdown and a page box. Press `Enter` in the box to jump. The line below them shows the total.
+The controls are **First**, **Previous**, the nearby page numbers, **Next** and **Last**, a page-size dropdown and a page box. Press `Enter` in the box to jump. The line below them shows the total. They sit below each view by default; **Controls position** in the [settings](<./02 Settings.md>) moves them above it, or shows them in both places.
 
 ## A DQL table
 

@@ -26,7 +26,7 @@ It needs `Dataview` installed and enabled.
 ## What it does
 
 1. Pages every DQL `TABLE` and `LIST` and every `dv.table` and `dv.list` view.
-2. Adds First, Previous, page numbers, Next and Last, a page-size dropdown, a jump-to-page box and the total count.
+2. Adds First, Previous, page numbers, Next and Last, a page-size dropdown, a jump-to-page box and the total count, below the view, above it, or both.
 3. Keeps your place when the vault changes and the view refreshes.
 4. Leaves `TASK` and `CALENDAR` queries, and results that fit on one page, exactly as they were.
 

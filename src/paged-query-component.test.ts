@@ -186,6 +186,7 @@ async function createHarness(result: DataviewResult): Promise<Harness> {
     api,
     containerEl,
     filePath: 'Note.md',
+    pagerPlacement: 'below',
     pageSizes: [PAGE_SIZE],
     renderFallback(fallbackEl, fallbackComponent): Promise<void> {
       fallbackCalls.push(fallbackComponent);
