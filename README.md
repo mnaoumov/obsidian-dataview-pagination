@@ -49,11 +49,12 @@ A copy of the vault ships with every release. You can access it via any of the f
 | Plugin | Features | How `Dataview Pagination` differs |
 | --- | --- | --- |
 | [Bases Paginator](https://community.obsidian.md/plugins/bases-paginator) | Paginated table view for Bases; quick filtering | Different renderer; pages `Dataview`, not Bases |
+| [Bases Plus](https://community.obsidian.md/plugins/bases-plus) | Table, timeline, calendar, graph and kanban views for Bases; whole-table and per-group paging in its table view | Different renderer; pages `Dataview`, not Bases |
 | [Bases Utilities](https://community.obsidian.md/plugins/bases-utilities) | Pagination and column search for Bases | Different renderer; pages `Dataview`, not Bases |
 | [Datacore](https://community.obsidian.md/plugins/datacore) | `Dataview`'s successor, with paging built in | Same goal for existing `Dataview` queries; no rewrite needed |
 | [QueryDash](https://community.obsidian.md/plugins/querydash) | New Bases views with search, sorting and pagination | Different renderer; pages `Dataview`, not Bases |
 
-Last searched for similar plugins on 2026-11-08.
+Last searched for similar plugins on 2026-11-26.
 
 ## Installation
 
